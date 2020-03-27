@@ -1,0 +1,64 @@
+void passenger_main()
+{
+	int carId;
+	museum->wander();
+	carId=ride->WaitFrCar();
+	park->sightsee();
+	ride->getOutofCar(carId);
+}
+void car_main()
+{
+	ride->waitFrPassenger(myId);
+	ride->cruiseUntilPassengerGetsOut(myId);
+}
+Lock mutex;
+cond carReady;
+cond passengerIn;
+cond passengerOut;
+const int n=NCars;
+int carState[n];
+int nextTicketToGive=0;
+int nextTicketReady=0;
+int carsWaiting=0;
+List waitingCars;
+int frontCarLoaded=0;
+int ride::WaitForCar()
+mutex->lock();
+int myTicket=nextTicketToGive++;
+while(carsWaiting==0 OR myTicket!=nextTicketReady)
+{
+	carReady.wait(&mutex);
+}
+int myCar=waitingCars->getHead();
+frontCarLoaded=true;
+carState[myCar]=BUSY;
+passengerIn.broadcast(&mutex);
+mutex->unlock();
+return myCar;
+ride::getOutofCar(int carId)
+mutex->lock();
+carState[carId]=FREE;
+passengerOut.broadcast(&mutex);
+mutex->unlock();
+ride::waitFrPassengerGetsOut(int carId)
+mutex->lock();
+carsWaiting++;
+waitingCars.add(carId);
+carReady->broadcast(&mutex);
+while(!frontCarLoaded&&waitingCars->getHead()!=carId)
+{
+	passengerIn.wait(&mutex);
+}
+frontCarLoaded=0;
+carsWaiting-;
+waitingCars.remove(carId);
+nextTicketReady++;
+carReady.broadcast(&mutex);
+mutex->unlock();
+ride::cruiseUntilPassengerGetsOut(int carId)
+mutex->lock();
+while(carState[carId]!=FREE)
+{
+	passengerOut.wait(&mutex);
+}
+mutex->unlock;
